@@ -1,0 +1,66 @@
+.dsh-embed-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+}
+
+.dsh-embed-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: var(--background-primary);
+}
+
+.dsh-embed-status {
+  padding: 8px 10px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dsh-embed-offline {
+  padding: 12px;
+  color: var(--text-normal);
+}
+
+.dsh-embed-offline .dsh-embed-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dsh-embed-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* --- selection annotate modal --- */
+.dsh-embed-annotate-src {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin-bottom: 6px;
+}
+
+.dsh-embed-annotate-quote {
+  max-height: 160px;
+  overflow: auto;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+  font-size: var(--font-text-size, 14px);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dsh-embed-annotate-input {
+  width: 100%;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.dsh-embed-annotate-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
