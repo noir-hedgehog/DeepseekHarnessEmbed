@@ -1,11 +1,11 @@
-// Generates src/embedded-server-package.ts from server-package/ so the
-// Obsidian plugin can install the DSH-side companion package self-contained.
+// Generates src/embedded-server-package.ts from packages/dsh-obsidian-embed/ so
+// the Obsidian plugin can install the DSH-side companion package self-contained.
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const pkgDir = join(root, "server-package");
+const pkgDir = join(root, "packages", "dsh-obsidian-embed");
 const files = ["package.json", "lib/index.js", "lib/client.js"];
 
 const entries = files.map(

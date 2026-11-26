@@ -1,0 +1,53 @@
+{
+  "name": "dsh-obsidian-embed",
+  "version": "0.3.1",
+  "description": "Embed mode for the DSH Web GUI: hides the sidebar, adds a compact workspace/session top bar, scales conversation fonts, auto-connects the vault workspace, and accepts the launch token so the web GUI can be iframed (DSH >= 0.1.2).",
+  "private": false,
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "obsidian",
+    "embed"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noir-hedgehog/DeepseekHarnessEmbed.git",
+    "directory": "packages/dsh-obsidian-embed"
+  },
+  "homepage": "https://github.com/noir-hedgehog/DeepseekHarnessEmbed#readme",
+  "bugs": {
+    "url": "https://github.com/noir-hedgehog/DeepseekHarnessEmbed/issues"
+  },
+  "license": "MIT"
+}

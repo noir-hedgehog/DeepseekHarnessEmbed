@@ -1,0 +1,42 @@
+{
+  "name": "dsh-obsidian-bridge",
+  "version": "0.3.1",
+  "description": "Host-side bridge for the DSH Web GUI when it runs inside Obsidian: injects the postMessage channel used for selection fill, file click to open, and shortcuts, plus the matching agent edit hook.",
+  "private": false,
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.mjs",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "obsidian"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noir-hedgehog/DeepseekHarnessEmbed.git",
+    "directory": "packages/dsh-obsidian-bridge"
+  },
+  "homepage": "https://github.com/noir-hedgehog/DeepseekHarnessEmbed#readme",
+  "bugs": {
+    "url": "https://github.com/noir-hedgehog/DeepseekHarnessEmbed/issues"
+  },
+  "license": "MIT"
+}

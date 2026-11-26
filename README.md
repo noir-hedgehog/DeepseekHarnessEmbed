@@ -41,7 +41,7 @@ Nothing is installed without confirming the dialog, and nothing outside `~/.dsh/
 | Auth URL or token | *(empty)* | Full launch URL with `?token=…`, or a bare token; overrides log discovery |
 | Token log path | `~/Library/Application Support/DeepSeek-Harness/logs/launchd.out.log` | Log scanned for the freshest `dsh web: …?token=…` line. `~` is expanded; macOS default shown — point it at your own log on Windows/Linux |
 | Start command | *(empty)* | Optional shell command used by the panel's **Start service** button when the server is offline |
-| File click preview | off | Companion `dsh-obsidian-bridge` component only (not bundled): clicking a file path in the panel opens it in the center. Inert without that component |
+| File click preview | off | Needs the optional [`dsh-obsidian-bridge`](packages/dsh-obsidian-bridge) DSH-side package: clicking a file path in the panel then opens it in the center. Inert without it |
 | DSH profile directory | `~/.dsh/profiles/web` | Where the server component installs |
 
 ## Security & privacy
@@ -58,14 +58,28 @@ Nothing is installed without confirming the dialog, and nothing outside `~/.dsh/
 - **Panel says "rejected the launch token (401)"** — the token rotated (server restart). Wait ~20 s for the self-heal, or paste the current launch URL into *Auth URL or token*.
 - **Plugin was just updated but the panel did not change** — the server component is re-offered once per plugin version; accept the install prompt, then reload the panel.
 
+## Repository layout
+
+- **Root** — the Obsidian plugin (`main.js`, `manifest.json`, `styles.css`). Obsidian's release
+  process requires these at the repository root.
+- **`packages/dsh-obsidian-embed/`** — the DSH-side companion this plugin installs for you: embed
+  mode for the web GUI (top bar, zoom, vault auto-connect) plus the token auth that makes an iframe
+  work. It is a normal DSH bundle: `dsh plugin --profile web add dsh-obsidian-embed`.
+- **`packages/dsh-obsidian-bridge/`** — optional DSH-side bridge for the click-to-open /
+  selection-delivery / shortcut features: `dsh plugin --profile web add dsh-obsidian-bridge`.
+- **`src/`** — plugin source; `scripts/gen-embedded.mjs` embeds the companion package into
+  `main.js` at build time, so users never run the DSH-side install themselves.
+
 ## Development
 
 ```bash
 npm install
-npm run build   # type-checks, embeds the server package, bundles main.js
+npm run build   # type-checks, embeds the DSH-side packages, bundles main.js
 ```
 
-`main.js`, `manifest.json` and `styles.css` are the release artifacts. The server component lives in `server-package/` and is embedded into the plugin at build time by `scripts/gen-embedded.mjs`.
+`main.js`, `manifest.json` and `styles.css` are the release artifacts. Each commit that should ship
+to the DSH side ships a `.tgz` per package on the release, built with `npm pack` inside the package
+directory.
 
 ## 中文速览
 

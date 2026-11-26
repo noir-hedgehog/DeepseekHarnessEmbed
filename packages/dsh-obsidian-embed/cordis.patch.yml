@@ -1,0 +1,7 @@
+# dsh-obsidian-embed bundle: mounts the host half (embed auth adapter + embed-mode
+# config for the web GUI). The client half is discovered from package.json
+# `dsh.client` and served by dsh-client-modules; it activates only in iframes or
+# on ?ob=1 pages, so a normal browser tab is unaffected.
+- insert:
+    - id: dsh-obsidian-embed
+      name: dsh-obsidian-embed
