@@ -19,7 +19,7 @@ export class InstallConsentModal extends Modal {
     contentEl.addClass("dsh-embed-annotate");
     contentEl.createEl("h3", { text: "安装 DSH 服务端组件" });
     contentEl.createEl("p", {
-      text: "本插件把 DSH Web GUI 嵌入侧边栏。隐藏侧栏、顶栏切换器、嵌入认证等定制由一个小型服务端组件（dsh-obsidian-embed）提供，需要写入 DSH 的 profile 目录：",
+      text: "本插件把 DSH Web GUI 嵌入侧边栏。隐藏侧栏、顶栏切换器、嵌入认证等定制由一个小型服务端组件（dsh-obsidian-embed）提供。该组件已打包在本插件内（不会联网下载任何内容），需要写入 DSH 的 profile 目录：",
     });
     contentEl.createEl("pre", {
       cls: "dsh-embed-annotate-quote",
@@ -27,7 +27,7 @@ export class InstallConsentModal extends Modal {
     });
     contentEl.createEl("p", {
       cls: "dsh-embed-hint",
-      text: "只写这两个位置；安装后需要重启一次 DSH 服务生效。也可以在设置页随时安装/修复。",
+      text: "只写这两个位置，且只在你点「安装」后写入；安装后需要重启一次 DSH 服务生效。也可以在设置页随时安装/修复。",
     });
 
     const row = contentEl.createDiv({ cls: "dsh-embed-annotate-actions" });

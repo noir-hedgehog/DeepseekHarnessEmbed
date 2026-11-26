@@ -1,5 +1,6 @@
-import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from "obsidian";
+import { App, Editor, FileSystemAdapter, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, TFile, WorkspaceLeaf } from "obsidian";
 import { DshEmbedView, VIEW_TYPE_DSH_EMBED } from "./view";
+import { WebPreviewView, VIEW_TYPE_WEB_PREVIEW } from "./web-preview-view";
 import { AnnotateModal, AnnotateAction } from "./annotate-modal";
 import { InstallConsentModal } from "./install-modal";
 import { SERVER_FILES, SERVER_PACKAGE_VERSION } from "./embedded-server-package";
@@ -27,6 +28,13 @@ export interface DshEmbedSettings {
   startCommand: string;
   /** DSH profile directory the server component installs into. */
   dshProfileDir: string;
+  /**
+   * Click a file in the panel → open it in the center: web-native types
+   * (html/htm/xhtml/svg/xml) render in an embedded browser view, everything
+   * else opens natively (md lands in reading mode). Auto-disabled while the
+   * dsh-harness plugin is enabled — it owns this message there.
+   */
+  fileClickPreview: boolean;
   /** Last plugin version for which the install prompt was already shown. */
   installPromptedVersion: string;
 }
@@ -34,9 +42,10 @@ export interface DshEmbedSettings {
 const DEFAULT_SETTINGS: DshEmbedSettings = {
   serverUrl: "http://127.0.0.1:3080",
   authUrl: "",
-  tokenLogPath: "/Users/uriah/Library/Application Support/DeepSeek-Harness/logs/launchd.out.log",
+  tokenLogPath: "~/Library/Application Support/DeepSeek-Harness/logs/launchd.out.log",
   startCommand: "",
   dshProfileDir: "~/.dsh/profiles/web",
+  fileClickPreview: false,
   installPromptedVersion: "",
 };
 
@@ -49,6 +58,20 @@ const DEFAULT_SETTINGS: DshEmbedSettings = {
 function nodeRequire(): ((id: string) => unknown) | null {
   const req = (window as unknown as { require?: (id: string) => unknown }).require;
   return typeof req === "function" ? req : null;
+}
+
+/**
+ * Expand a leading `~` using the host user's home directory. Leaves the path
+ * untouched when Node is unavailable (mobile/unsupported hosts) so the caller
+ * fails with the original path instead of a surprising "undefined" one.
+ */
+function expandHome(raw: string): string {
+  const p = raw.trim();
+  if (!p.startsWith("~")) return p;
+  const req = nodeRequire();
+  if (!req) return p;
+  const os = req("os") as typeof import("os");
+  return p.replace(/^~/, os.homedir());
 }
 
 /** Read only the log tail: 1MB easily covers the freshest `dsh web: …token=…` line. */
@@ -86,24 +109,25 @@ export default class DshEmbedPlugin extends Plugin {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
     this.registerView(VIEW_TYPE_DSH_EMBED, (leaf) => new DshEmbedView(leaf, this));
+    this.registerView(VIEW_TYPE_WEB_PREVIEW, (leaf) => new WebPreviewView(leaf));
 
     this.addRibbonIcon("bot", "DeepSeek Harness", () => {
       void this.activateView();
     });
     this.addCommand({
-      id: "open-dsh-embed",
+      id: "open-panel",
       name: "Open DeepSeek Harness panel",
       callback: () => void this.activateView(),
     });
     this.addCommand({
-      id: "reload-dsh-embed",
+      id: "reload-panel",
       name: "Reload DeepSeek Harness panel",
       callback: () => this.reloadViews(),
     });
 
     // Editor selection → annotate → fill / send to the current session.
     this.addCommand({
-      id: "dsh-send-selection",
+      id: "send-selection",
       name: "Send selection to DeepSeek Harness…",
       editorCheckCallback: (checking, editor, view) => {
         const sel = editor.getSelection();
@@ -126,21 +150,33 @@ export default class DshEmbedPlugin extends Plugin {
     );
 
     // Messages coming back out of the iframe (bridge ready / delivery acks).
-    window.addEventListener("message", (ev) => {
-      const d = ev.data as { type?: string; mode?: string; ok?: boolean; reason?: string } | undefined;
+    // registerDomEvent (not raw addEventListener) so a plugin reload cannot
+    // stack duplicate listeners.
+    this.registerDomEvent(window, "message", (ev) => {
+      const d = ev.data as { type?: string; mode?: string; ok?: boolean; reason?: string; path?: string } | undefined;
       if (!d || typeof d !== "object") return;
       if (d.type === "dsh-ob-ready") {
         this.ready = true;
+        // (Re)arm the bridge's click→open-file path resolution for this frame.
+        const f = this.activeFrame();
+        if (f) this.postOpenCfg(f);
         const q = this.queuedText;
         this.queuedText = null;
         if (q) this.postToFrame(q.text, q.mode);
         return;
       }
+      if (d.type === "dsh-open-in-obsidian" && typeof d.path === "string" && d.path !== "") {
+        void this.openFilePreview(d.path);
+        return;
+      }
       if (d.type === "dsh-ob-ack") {
-        if (this.pending) {
-          window.clearTimeout(this.pending.timer);
-          this.pending = null;
-        }
+        // Only the first ack per send reports. Stacked iframe listeners (older
+        // server-component builds re-applied without cleanup) answer one post
+        // with N acks — without this gate the user gets N identical Notices.
+        const pending = this.pending;
+        if (!pending) return; // duplicate or post-timeout ack — already reported
+        window.clearTimeout(pending.timer);
+        this.pending = null;
         if (d.ok) {
           new Notice(d.mode === "dsh-ob-send" ? "已发送到会话" : "已加入输入框");
         } else {
@@ -165,15 +201,7 @@ export default class DshEmbedPlugin extends Plugin {
 
   /** Resolved DSH profile dir (`~` expanded via Node's os.homedir). */
   profileDir(): string {
-    const raw = this.settings.dshProfileDir.trim() || DEFAULT_SETTINGS.dshProfileDir;
-    if (raw.startsWith("~")) {
-      const req = nodeRequire();
-      if (req) {
-        const os = req("os") as typeof import("os");
-        return raw.replace(/^~/, os.homedir());
-      }
-    }
-    return raw;
+    return expandHome(this.settings.dshProfileDir.trim() || DEFAULT_SETTINGS.dshProfileDir);
   }
 
   private serverPaths() {
@@ -272,6 +300,11 @@ export default class DshEmbedPlugin extends Plugin {
   registerFrame(view: DshEmbedView): void {
     this.views.add(view);
     this.ready = false;
+    // Give the in-frame bridge the vault root so its click interceptor can
+    // resolve file paths. The bridge script is inline from page start, but
+    // posting on load (and again on dsh-ob-ready) covers every ordering.
+    const frame = view.frame;
+    if (frame) frame.addEventListener("load", () => this.postOpenCfg(frame));
   }
 
   unregisterFrame(view: DshEmbedView): void {
@@ -284,6 +317,66 @@ export default class DshEmbedPlugin extends Plugin {
       if (v.frame && v.frame.isConnected) return v.frame;
     }
     return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // File click → center preview
+  // ---------------------------------------------------------------------
+
+  /** Extensions that render as pages in the embedded browser view. */
+  private static WEB_PREVIEW_EXTS = new Set(["html", "htm", "xhtml", "svg", "xml"]);
+
+  /** Tell the in-frame bridge this vault's root so it can resolve clicked paths. */
+  private postOpenCfg(frame: HTMLIFrameElement): void {
+    try {
+      const adapter = this.app.vault.adapter;
+      if (!(adapter instanceof FileSystemAdapter) || !frame.contentWindow) return;
+      const origin = new URL(this.settings.serverUrl.trim() || DEFAULT_SETTINGS.serverUrl).origin;
+      frame.contentWindow.postMessage({ type: "dsh-open-cfg", vaultRoot: adapter.getBasePath() }, origin);
+    } catch {
+      /* frame not ready — the dsh-ob-ready re-post covers it */
+    }
+  }
+
+  /**
+   * Open a file clicked in the DSH panel: web-native types render in the
+   * center embedded-browser view (reused across clicks), everything else
+   * opens natively in the current center leaf (md in reading mode).
+   */
+  private async openFilePreview(absPath: string): Promise<void> {
+    if (!this.settings.fileClickPreview) return;
+    // dsh-harness owns this message in vaults where it is enabled — without
+    // this guard both plugins would open the file.
+    const plugins = (this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } }).plugins;
+    if (plugins?.enabledPlugins?.has("dsh-harness")) return;
+
+    const adapter = this.app.vault.adapter;
+    if (!(adapter instanceof FileSystemAdapter)) return;
+    const root = adapter.getBasePath().replace(/\/+$/, "");
+    if (!absPath.startsWith(root + "/")) {
+      new Notice("文件不在当前 vault 中：" + absPath);
+      return;
+    }
+    const rel = absPath.slice(root.length + 1);
+    const file = this.app.vault.getAbstractFileByPath(rel);
+    if (!(file instanceof TFile)) {
+      new Notice("文件不存在：" + rel);
+      return;
+    }
+
+    const { workspace } = this.app;
+    const ext = file.extension.toLowerCase();
+    if (DshEmbedPlugin.WEB_PREVIEW_EXTS.has(ext)) {
+      // One reused preview tab — clicking another file replaces its content.
+      const leaf = workspace.getLeavesOfType(VIEW_TYPE_WEB_PREVIEW)[0] ?? workspace.getLeaf("tab");
+      await leaf.setViewState({ type: VIEW_TYPE_WEB_PREVIEW, active: true, state: { path: absPath } });
+      workspace.revealLeaf(leaf);
+      return;
+    }
+    const leaf = workspace.getLeaf(false);
+    if (!leaf) return;
+    await leaf.openFile(file, ext === "md" ? { eState: { mode: "preview" } } : undefined);
+    workspace.revealLeaf(leaf);
   }
 
   // ---------------------------------------------------------------------
@@ -378,7 +471,7 @@ export default class DshEmbedPlugin extends Plugin {
         if (/^[\w-]{8,}$/.test(auth)) return auth;
       }
     }
-    const logPath = this.settings.tokenLogPath.trim();
+    const logPath = expandHome(this.settings.tokenLogPath);
     if (!logPath) return "";
     try {
       const content = readLogTail(logPath);
@@ -497,7 +590,7 @@ class DshEmbedSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Token log path")
       .setDesc(
-        "launchd stdout log containing the 'dsh web: …?token=…' line; used to discover the current launch token.",
+        "Log file containing the 'dsh web: …?token=…' line printed when the server starts; used to discover the current launch token. `~` is expanded. The default matches the macOS launchd setup in the README — Windows/Linux users should point this at their own `dsh web` log.",
       )
       .addText((text) =>
         text
@@ -512,7 +605,7 @@ class DshEmbedSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Start command (optional)")
       .setDesc(
-        "Shell command for the panel's Start button when the server is offline, e.g. /Users/you/Library/Application Support/DeepSeek-Harness/start-harness.sh",
+        "Shell command for the panel's Start button when the server is offline, e.g. ~/Library/Application Support/DeepSeek-Harness/start-harness.sh (~ is expanded).",
       )
       .addText((text) =>
         text
@@ -520,6 +613,20 @@ class DshEmbedSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.startCommand)
           .onChange(async (value) => {
             this.plugin.settings.startCommand = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("文件点击在中央预览 / File click preview")
+      .setDesc(
+        "需要额外安装 dsh-obsidian-bridge 伴生组件（不在本插件内）：点击面板里的文件路径，html/svg 等在中央内嵌浏览器渲染，md/图片/pdf 用 Obsidian 原生打开。未装该组件时此开关不生效。",
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.fileClickPreview)
+          .onChange(async (value) => {
+            this.plugin.settings.fileClickPreview = value;
             await this.plugin.saveSettings();
           }),
       );

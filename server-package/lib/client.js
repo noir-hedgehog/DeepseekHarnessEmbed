@@ -416,7 +416,16 @@ window.__ModuleLoader__.load({
       // occupant of a session-scoped slot (its standard props carry
       // `inputActions`, the real composer face: setDraft/submit).
       // -------------------------------------------------------------------
-      var captured = { inputActions: null };
+      // `captured` is shared across re-applies: apply() re-runs on every
+      // client resync/reconnect, and whichever slot occupant is live feeds
+      // this one box — the single guarded listener below always reads the
+      // current actions regardless of which apply won the slot.
+      var captured = null;
+      try { captured = window.__dshObEmbedCaptured__ || null; } catch (_) {}
+      if (!captured) {
+        captured = { inputActions: null };
+        try { window.__dshObEmbedCaptured__ = captured; } catch (_) {}
+      }
       ctx.slots.inject("conversation.session.header.utilities", () => ctx.slots.register(
         { name: "conversation.session.header.utilities", id: "dsh-obsidian-embed-input", order: 1000 },
         (props) => {
@@ -461,7 +470,16 @@ window.__ModuleLoader__.load({
           reply(false, String((e && e.message) || e));
         }
       };
-      window.addEventListener("message", onMessage);
+      // apply() re-runs on every resync/reconnect; a bare addEventListener
+      // stacks one listener per run and every ack/setDraft/submit then fires
+      // N times (observed: 34 acks for one send). Keep exactly one active
+      // listener — replace the previous apply's registration.
+      try {
+        var prevOnMessage = window.__dshObEmbedOnMessage__;
+        if (prevOnMessage) window.removeEventListener("message", prevOnMessage);
+        window.__dshObEmbedOnMessage__ = onMessage;
+        window.addEventListener("message", onMessage);
+      } catch (_) {}
 
       // Tell the Obsidian parent the bridge is listening (it queues payloads
       // until this arrives).

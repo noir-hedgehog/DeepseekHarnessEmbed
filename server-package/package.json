@@ -1,7 +1,7 @@
 {
   "name": "dsh-obsidian-embed",
   "description": "Obsidian embed mode for the DSH Web GUI: hides the sidebar, adds a compact workspace/session top bar, scales conversation fonts, auto-connects the vault workspace, accepts the launch token for iframe auth (DSH >= 0.1.2), and bridges editor selections into the composer.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "main": "lib/index.js",

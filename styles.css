@@ -64,3 +64,17 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* --- center web preview (html/svg/xml clicked in the DSH panel) --- */
+.dsh-embed-web-preview {
+  padding: 0;
+  height: 100%;
+}
+
+.dsh-embed-web-preview-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: flex;
+  background: var(--background-primary);
+}
