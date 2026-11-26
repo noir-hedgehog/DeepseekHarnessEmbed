@@ -1,0 +1,8 @@
+# dsh-obsidian-embed-bridge bundle: mounts the host half that injects the
+# postMessage bridge into the served web GUI (selection fill, file click → open
+# in Obsidian, keyboard shortcuts) and the matching agent pre-step hook.
+# Optional: the dsh-embed Obsidian plugin works without it, with click-to-open
+# disabled.
+- insert:
+    - id: dsh-obsidian-embed-bridge
+      name: dsh-obsidian-embed-bridge

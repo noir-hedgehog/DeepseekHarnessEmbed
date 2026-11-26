@@ -41,7 +41,7 @@ Nothing is installed without confirming the dialog, and nothing outside `~/.dsh/
 | Auth URL or token | *(empty)* | Full launch URL with `?token=…`, or a bare token; overrides log discovery |
 | Token log path | `~/Library/Application Support/DeepSeek-Harness/logs/launchd.out.log` | Log scanned for the freshest `dsh web: …?token=…` line. `~` is expanded; macOS default shown — point it at your own log on Windows/Linux |
 | Start command | *(empty)* | Optional shell command used by the panel's **Start service** button when the server is offline |
-| File click preview | off | Needs the optional [`dsh-obsidian-bridge`](packages/dsh-obsidian-bridge) DSH-side package: clicking a file path in the panel then opens it in the center. Inert without it |
+| File click preview | off | Needs the optional [`dsh-obsidian-embed-bridge`](packages/dsh-obsidian-embed-bridge) DSH-side package: clicking a file path in the panel then opens it in the center. Inert without it |
 | DSH profile directory | `~/.dsh/profiles/web` | Where the server component installs |
 
 ## Security & privacy
@@ -65,8 +65,8 @@ Nothing is installed without confirming the dialog, and nothing outside `~/.dsh/
 - **`packages/dsh-obsidian-embed/`** — the DSH-side companion this plugin installs for you: embed
   mode for the web GUI (top bar, zoom, vault auto-connect) plus the token auth that makes an iframe
   work. It is a normal DSH bundle: `dsh plugin --profile web add dsh-obsidian-embed`.
-- **`packages/dsh-obsidian-bridge/`** — optional DSH-side bridge for the click-to-open /
-  selection-delivery / shortcut features: `dsh plugin --profile web add dsh-obsidian-bridge`.
+- **`packages/dsh-obsidian-embed-bridge/`** — optional DSH-side bridge for the click-to-open /
+  selection-delivery / shortcut features: `dsh plugin --profile web add dsh-obsidian-embed-bridge`.
 - **`src/`** — plugin source; `scripts/gen-embedded.mjs` embeds the companion package into
   `main.js` at build time, so users never run the DSH-side install themselves.
 

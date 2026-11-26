@@ -1,6 +1,6 @@
 {
   "name": "dsh-obsidian-embed",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Embed mode for the DSH Web GUI: hides the sidebar, adds a compact workspace/session top bar, scales conversation fonts, auto-connects the vault workspace, and accepts the launch token so the web GUI can be iframed (DSH >= 0.1.2).",
   "private": false,
   "type": "module",

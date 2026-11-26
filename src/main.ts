@@ -620,7 +620,7 @@ class DshEmbedSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("文件点击在中央预览 / File click preview")
       .setDesc(
-        "需要额外安装 dsh-obsidian-bridge 伴生组件（不在本插件内）：点击面板里的文件路径，html/svg 等在中央内嵌浏览器渲染，md/图片/pdf 用 Obsidian 原生打开。未装该组件时此开关不生效。",
+        "需要额外安装 dsh-obsidian-embed-bridge 伴生组件（不在本插件内）：点击面板里的文件路径，html/svg 等在中央内嵌浏览器渲染，md/图片/pdf 用 Obsidian 原生打开。未装该组件时此开关不生效。",
       )
       .addToggle((toggle) =>
         toggle

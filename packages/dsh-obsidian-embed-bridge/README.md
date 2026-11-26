@@ -1,4 +1,4 @@
-# dsh-obsidian-bridge
+# dsh-obsidian-embed-bridge
 
 Host-side bridge for the DSH Web GUI when it runs inside
 [Obsidian](https://obsidian.md) through the
@@ -23,7 +23,7 @@ delivery disabled.
 ## Install
 
 ```sh
-dsh plugin --profile web add dsh-obsidian-bridge
+dsh plugin --profile web add dsh-obsidian-embed-bridge
 ```
 
 Or install the `.tgz` attached to a [release](https://github.com/noir-hedgehog/DeepseekHarnessEmbed/releases).
